@@ -18,9 +18,6 @@ public class PcapParser{
     public static final int etherTypeIP = 0x800;
     
     //ipv6
-
-    
-    
     public static final int verIHLOffset = 14; 
     public static final int ipProtoOffset = 23;
     public static final int ipSrcOffset = 26;
@@ -140,12 +137,12 @@ public class PcapParser{
 
     private int getIPHeaderLength(byte[] packet)
     {
-    	int headerLength= (packet[verIHLOffset] & 0xF) * 4;
-    	return headerLength;
+    	return (packet[verIHLOffset] & 0xF) * 4;
+    	
     }
     private int getIPHeaderLengthv6(byte[] packet)
     {
-    	return 40;
+    	return 40; ///40 bytes fixed length header for ipv6
     }
     
     private int getTCPHeaderLength(byte[] packet){
@@ -153,8 +150,18 @@ public class PcapParser{
 	
 	int dataOffset = PcapParser.etherHeaderLength +
 	    this.getIPHeaderLength(packet) + inTCPHeaderDataOffset;
-	return ((packet[dataOffset] >> 4) & 0xF) * 4;
+	int ret =((packet[dataOffset] >> 4) & 0xF) * 4;
+	return ret;
     }
+    private int getTCPHeaderLengthv6(byte[] packet)
+    {
+    	final int inTCPHeaderDataOffset = 12;
+    	
+    	int dataOffset = PcapParserv6.etherHeaderLength +
+    	    this.getIPHeaderLengthv6(packet) + inTCPHeaderDataOffset;
+    	int ret =((packet[dataOffset] >> 4) & 0xF) * 4;
+    	return ret;
+        }
     
     private IPPacket buildIPPacket(byte[] packet, long timestamp)
     {
@@ -254,7 +261,7 @@ public class PcapParser{
 	byte[] data = new byte[0];
 	if((packet.length - payloadDataStart) > 0){
 	    data = new byte[packet.length - payloadDataStart];
-	    System.arraycopy(packet, payloadDataStart, data, 0, data.length);
+   	    System.arraycopy(packet, payloadDataStart, data, 0, data.length);
 	}
 	udpPacket.data = data;
 	
@@ -301,8 +308,8 @@ public class PcapParser{
     	    this.getIPHeaderLengthv6(packet) + inTCPHeaderDstPortOffset;
     	tcpPacket.dst_port = this.convertShort(packet, dstPortOffset);
     	
-    	int payloadDataStart =  PcapParser.etherHeaderLength +
-    	    this.getIPHeaderLengthv6(packet) + this.getTCPHeaderLength(packet);
+    	int payloadDataStart =  PcapParserv6.etherHeaderLength +
+    	    this.getIPHeaderLengthv6(packet) + this.getTCPHeaderLengthv6(packet);
     	byte[] data = new byte[0];
     	if((packet.length - payloadDataStart) > 0){
     	    data = new byte[packet.length - payloadDataStart];
@@ -323,7 +330,8 @@ public class PcapParser{
     
     }
     
-    private PcapPacketHeader buildPcapPacketHeader(){
+    private PcapPacketHeader buildPcapPacketHeader()
+    {
 	final int inPcapPacketHeaderSecOffset = 0;
 	final int inPcapPacketHeaderUSecOffset = 4;
 	
